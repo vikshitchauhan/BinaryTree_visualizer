@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Tree Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 20;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .tree-node {
+            transition: all 0.5s ease;
+        }
+        
+        .tree-node.highlight {
+            fill: #ef4444 !important;
+            stroke: #dc2626 !important;
+            stroke-width: 3;
+        }
+        
+        .tree-node.visited {
+            fill: #10b981 !important;
+            stroke: #059669 !important;
+        }
+        
+        .tree-line {
+            transition: all 0.5s ease;
+        }
+        
+        .zoom-info {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #374151;
+            font-weight: bold;
+        }
+        
+        .tree-container {
+            overflow: auto;
+            position: relative;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 0.6s ease-in-out;
+        }
+        
+        /* Slider Styling */
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: linear-gradient(to right, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+            outline: none;
+            border-radius: 15px;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="bg-slate-200">
+    <div>
+        <h1 class="text-green-700 px-6 py-14 text-5xl  text-center">
+            <b>🌳 Tree Visualizer</b> 
+        </h1>
+        
+        <div class="max-w-7xl mx-auto mb-8">
+            <div class="bg-white rounded-xl p-8 shadow-2xl slide-in">
+                <div class="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Add Numbers -->
+                    <div>
+                        <label class="block text-xl font-bold text-gray-700 mb-3">🔢 Add The Numbers</label>
+                        <div class="flex">
+                            <input type="text" id="nodeInput" placeholder="1,2,3,4,5" 
+                                   class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-l-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                   
+                            <button onclick="addNodes()" 
+                                    class="px-6 py-3 bg-gradient-to-r from-green-400 to-blue-700 text-white rounded-r-xl hover:from-green-600 hover:to-blue-700 transition-all transform hover:scale-105">
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Examples -->
+                    <div>
+                        <label class="block text-xl font-bold text-gray-700 mb-3">⚡ Quick Examples</label>
+                        <div class="space-y-3">
+                            <!-- Example Type Selector -->
+                            <select id="exampleType" 
+                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="">Choose tree type...</option>
+                                <option value="binary">Binary Search Tree</option>
+                                <option value="avl">AVL Tree (Self-Balancing)</option>
+                                <option value="complete">Complete Binary Tree</option>
+                                <option value="balanced">Balanced Binary Tree</option>
+                            </select>
+                            
+                            <!-- Generate Button -->
+                            <button id="generateExample" onclick="generateDynamicExample()" 
+                                    class="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled>
+                                Generate Tree
+                            </button>
+                            
+                            <!-- Instructions -->
+                            <div class="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                                💡 <strong>How to use:</strong> Enter numbers in the input field above, select a tree type, then click "Generate Tree" to see how different structures are created from your numbers.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Traversal Controls -->
+                <div class="mt-6">
+                    <label class="block text-xl font-bold text-gray-700 mb-3">🔄 Tree Traversal</label>
+                    <div class="flex gap-2">
+                        <button onclick="performTraversal('inorder')" 
+                                class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all text-xl">
+                            In-Order
+                        </button>
+                        <button onclick="performTraversal('preorder')" 
+                                class="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all text-xl">
+                            Pre-Order
+                        </button>
+                        <button onclick="performTraversal('postorder')" 
+                                class="flex-1 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all text-xl">
+                            Post-Order
+                        </button>
+                        <button onclick="clearTree()" 
+                                class="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all text-xl">
+                            Clear Tree
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tree Display -->
+        <div class="max-w-7xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 mt-8 min-h-[600px] slide-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800">🌲 Tree Visualization</h2>
+                    <div id="buildingStatus" class="hidden px-4 py-2 bg-blue-100 text-blue-800 rounded-lg font-semibold">
+                        🔨 Building tree... <span id="buildingProgress"></span>
+                    </div>
+                </div>
+                
+                <div class="relative w-full h-[500px] bg-gradient-to-b from-blue-50 to-white rounded-xl border-2 border-gray-200 overflow-hidden">
+                    <!-- Zoom Controls -->
+                    <div class="zoom-controls">
+                        <button class="zoom-btn hover:bg-slate-300" onclick="zoomIn()" title="Zoom In">
+                            <span class="text-xl font-bold text-center text-gray-600">+</span>
+                        </button>
+                        <button class="zoom-btn hover:bg-slate-300" onclick="zoomOut()" title="Zoom Out">
+                            <span class="text-xl font-bold text-gray-600">−</span>
+                        </button>
+                        <button class="zoom-btn hover:bg-slate-300" onclick="resetZoom()" title="Reset Zoom">
+                            <span class="text-xl font-bold text-gray-600">⌂</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Zoom Info -->
+                    <div class="zoom-info hidden text-green-700 text-xl p-4">
+                        Zoom: <span id="zoomLevel">100%</span>
+                    </div>
+
+                    <!-- Tree Container -->
+                    <div id="treeDisplay" class="tree-container relative w-full h-full overflow-auto">
+                        <svg id="treeSVG" class="w-full h-full min-w-full min-h-full">
+                            <!-- Tree will be drawn here -->
+                        </svg>
+                        <div id="emptyMessage" class="absolute inset-0 flex items-center justify-center text-gray-400 text-xl pointer-events-none">
+                            <div class="text-center">
+                                🌱 Your tree will grow here<br>
+                                <span class="text-sm mt-2 block">Add numbers and watch the magic happen!</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <!-- Stats -->
+        <div class="max-w-8xl mx-auto mt-8">
+            <div class="bg-white rounded-2xl shadow-xl p-8 slide-in">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">📊 Tree Statistics</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-6 text-center">
+                    <div class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                        <div class="text-3xl font-bold text-blue-600" id="nodeCount">0</div>
+                        <div class="text-sm text-gray-600 mt-1">Total Nodes</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                        <div class="text-3xl font-bold text-green-600" id="treeHeight">0</div>
+                        <div class="text-sm text-gray-600 mt-1">Tree Height</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
+                        <div class="text-3xl font-bold text-purple-600" id="leafCount">0</div>
+                        <div class="text-sm text-gray-600 mt-1">Leaf Nodes</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl">
+                        <div class="text-3xl font-bold text-orange-600" id="balanceFactor">0</div>
+                        <div class="text-sm text-gray-600 mt-1">Balance</div>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl">
+                        <div class="text-3xl font-bold text-pink-600" id="lastAdded">-</div>
+                        <div class="text-sm text-gray-600 mt-1">Last Added</div>
+                    </div>
+                </div>
+                
+                <!-- Tree Traversal Results -->
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-4 bg-blue-50 rounded-xl">
+                        <div class="text-lg font-bold text-blue-700 mb-2">🔢 In-Order Traversal:</div>
+                        <div id="inorderResult" class="text-blue-600 font-mono text-sm break-words">Click In-Order button</div>
+                    </div>
+                    <div class="p-4 bg-green-50 rounded-xl">
+                        <div class="text-lg font-bold text-green-700 mb-2">🔢 Pre-Order Traversal:</div>
+                        <div id="preorderResult" class="text-green-600 font-mono text-sm break-words">Click Pre-Order button</div>
+                    </div>
+                    <div class="p-4 bg-purple-50 rounded-xl">
+                        <div class="text-lg font-bold text-purple-700 mb-2">🔢 Post-Order Traversal:</div>
+                        <div id="postorderResult" class="text-purple-600 font-mono text-sm break-words">Click Post-Order button</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+        
+       
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
